@@ -1,0 +1,63 @@
+type CustomRoleType {
+    name: String
+    permissions: [String]
+}
+
+type DeviceType {
+    deviceId: String
+    deviceType: String
+    ipAddress: String
+    lastLogin: String
+    userAgent: String
+}
+
+type OrganizationMemberType {
+    memberId: String
+    role: String
+}
+
+type NameType {
+    firstName: String
+    lastName: String
+}
+
+type UserType {
+    _id: ID
+    name: NameType
+    email: String
+    profilePicture: String
+    phoneNumber: String
+    role: String
+    isVerified: Boolean
+    isOrganization: Boolean
+    organizationId: [String]
+    customRoles: [CustomRoleType]
+    organizationMembers: [OrganizationMemberType ]
+    devices: [DeviceType]
+    lastLogin: String
+    createdAt: String
+    updatedAt: String
+}
+
+input RegisterInput {
+    firstName: String
+    lastName: String
+    email: String
+    password: String
+    profilePicture: String
+    phoneNumber: String
+}
+
+input LoginInput {
+    email: String
+    password: String
+}
+
+type Query {
+    getUser(_id: ID!): UserType
+}
+
+type Mutation {
+    registerUser(user: RegisterInput!): UserType
+    loginUser(user: LoginInput!): UserType
+}
