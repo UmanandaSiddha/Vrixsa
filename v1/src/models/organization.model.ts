@@ -2,7 +2,9 @@ import mongoose, { Document, Schema } from "mongoose"
 
 export interface IOrganization extends Document {
     _id: mongoose.Schema.Types.ObjectId;
-
+    organizationId: string;
+    organizationName: string;
+    organizationType: string;
     createdAt: Date;
     updatedAt: Date;
 }

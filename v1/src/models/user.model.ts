@@ -25,25 +25,25 @@ export interface IDevice extends Document {
 
 export interface IUser extends Document {
     _id: mongoose.Schema.Types.ObjectId;
-    name: {
-        firstName: string;
-        lastName: string;
-    },
+    firstName: string;
+    lastName: string;
     email: string;
     password: string;
-    isOrganization: boolean;
+    // isOrganization: boolean;
     profilePicture: string;
     phoneNumber?: string;
     role: string;
-    organizationId: mongoose.Schema.Types.ObjectId;
-    customRoles: ICustomRole[];
-    organizationMembers: {
-        memberId: mongoose.Schema.Types.ObjectId;
-        role: string;
-    }[]
+    // organizationId: mongoose.Schema.Types.ObjectId;
+    // customRoles: ICustomRole[];
+    // organizationMembers: {
+    //     memberId: mongoose.Schema.Types.ObjectId;
+    //     role: string;
+    // }[]
     devices: IDevice[];
     lastLogin: Date;
     isVerified: boolean;
+    googleId: string;
+    githubId: string;
 
     // oneTimePassword?: string;
     // oneTimeExpire?: Date;
@@ -112,15 +112,13 @@ export const UserRoleEnum = {
 
 const UserSchema: Schema<IUser> = new mongoose.Schema(
     {
-        name: {
-            firstName: { 
-                type: String, 
-                required: true 
-            },
-            lastName: { 
-                type: String, 
-                required: true 
-            }
+        firstName: { 
+            type: String, 
+            required: true 
+        },
+        lastName: { 
+            type: String, 
+            required: true 
         },
         email: {
             type: String,
@@ -148,30 +146,32 @@ const UserSchema: Schema<IUser> = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        isOrganization: {
-            type: Boolean,
-            default: false
-        },
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            // required: function (this: IUser) { return !this.isOrganization; },
-            required: false
-        },
-        customRoles: [CustomRoleSchema],
-        organizationMembers: [
-            {
-                memberId: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'User'
-                },
-                role: {
-                    type: String,
-                    enum: Object.values(CustomRoleEnum),
-                    default: CustomRoleEnum.STUDENT,
-                }
-            }
-        ],
+        // isOrganization: {
+        //     type: Boolean,
+        //     default: false
+        // },
+        // organizationId: {
+        //     type: mongoose.Schema.Types.ObjectId,
+        //     ref: 'User',
+        //     // required: function (this: IUser) { return !this.isOrganization; },
+        //     required: false
+        // },
+        // customRoles: [CustomRoleSchema],
+        // organizationMembers: [
+        //     {
+        //         memberId: {
+        //             type: mongoose.Schema.Types.ObjectId,
+        //             ref: 'User'
+        //         },
+        //         role: {
+        //             type: String,
+        //             enum: Object.values(CustomRoleEnum),
+        //             default: CustomRoleEnum.STUDENT,
+        //         }
+        //     }
+        // ],
+        googleId: String,
+        githubId: String,
         devices: [DeviceSchema],
         lastLogin: {
             type: Date,
