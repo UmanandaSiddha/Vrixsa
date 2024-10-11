@@ -7,7 +7,7 @@ import limiter from "./config/rateLimiter.js";
 import ErrorMiddleware from "./middlewares/error.js";
 
 import user from "./routes/userRoute.js";
-import payment from "./routes/PaymentRoute.js";
+// import payment from "./routes/PaymentRoute.js";
 import product from "./routes/productRoute.js";
 import order from "./routes/orderRoute.js";
 import notification from "./routes/notificationRoute.js";
@@ -42,7 +42,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.static("public"));
 
 app.use("/api/v1/user", user);
-app.use("/api/v1/payment", payment);
+// app.use("/api/v1/payment", payment);
 app.use("/api/v1/product", product);
 app.use("/api/v1/order", order);
 app.use("/api/v1/notification",notification);
