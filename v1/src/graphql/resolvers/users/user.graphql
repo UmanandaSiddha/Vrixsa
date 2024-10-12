@@ -1,43 +1,65 @@
-type CustomRoleType {
-    name: String
-    permissions: [String]
+enum UserRoleEnum {
+    USER
+    ADMIN
 }
 
-type DeviceType {
-    deviceId: String
-    deviceType: String
-    ipAddress: String
-    lastLogin: String
-    userAgent: String
+enum UserAccountEnum {
+    EMAIL
+    GOOGLE
+    GITHUB
 }
 
-type OrganizationMemberType {
-    memberId: String
-    role: String
+type LoginAttempt {
+    count: Int!
+    lastLogin: Date!
 }
 
-type NameType {
-    firstName: String
-    lastName: String
+type Device {
+    deviceId: String!
+    deviceType: String!
+    ipAddress: String!
+    lastLogin: Date!
 }
 
-type UserType {
-    _id: ID
-    name: NameType
-    email: String
+type Address {
+    street: String!
+    city: String!
+    state: String!
+    postalCode: String!
+    country: String!
+}
+
+type BillingInfo {
+    phoneNumber: String!
+    address: Address!
+}
+
+type User {
+    _id: ID!
+    firstName: String!
+    lastName: String!
+    email: String!
+    password: String
     profilePicture: String
     phoneNumber: String
-    role: String
-    isVerified: Boolean
-    isOrganization: Boolean
-    organizationId: [String]
-    customRoles: [CustomRoleType]
-    organizationMembers: [OrganizationMemberType ]
-    devices: [DeviceType]
-    lastLogin: String
-    createdAt: String
-    updatedAt: String
+    role: UserRoleEnum!
+    account: [UserAccountEnum!]!
+    isBlocked: Boolean!
+    isVerified: Boolean!
+    googleId: String
+    githubId: String
+    isDeactivated: Boolean!
+    deactivateReason: String
+    deactivateTime: Date
+    devices: [Device!]
+    billingInfo: BillingInfo
+    latestSubscription: ID
+    loginAttempt: LoginAttempt
+    createdAt: Date!
+    updatedAt: Date!
 }
+
+scalar Date
 
 input RegisterInput {
     firstName: String
@@ -54,10 +76,10 @@ input LoginInput {
 }
 
 type Query {
-    getUser(_id: ID!): UserType
+    getUser(_id: ID!): User!
 }
 
 type Mutation {
-    registerUser(user: RegisterInput!): UserType
-    loginUser(user: LoginInput!): UserType
+    registerUser(user: RegisterInput!): User!
+    loginUser(user: LoginInput!): User!
 }

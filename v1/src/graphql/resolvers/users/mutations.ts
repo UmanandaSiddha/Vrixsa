@@ -1,14 +1,24 @@
 import { GraphQLError } from "graphql";
+import { v4 as uuidv4 } from 'uuid';
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import User, { IUser } from "../../../models/user.model.js";
-import { MutationResolvers } from "../../../generated/graphql.js";
+import { MutationResolvers, UserAccountEnum, UserRoleEnum } from "../../../generated/graphql.js";
 
 export const userMutations: MutationResolvers = {
     registerUser: async (parent: any, args: any, context: any, info: any) => {
         try {
             const { user } = args;
+            const { email, password, firstName, lastName, profilePicture, phoneNumber } = user;
+            if (!email || !password || !firstName || !lastName) {
+                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                    extensions: {
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
+                    }
+                });
+            }
 
-            const userDetails = await User.findOne({ email: user.email }).lean() as IUser;
+            const userDetails = await User.findOne({ email }).lean() as IUser;
             if (userDetails) {
                 throw new GraphQLError("User already exits", {
                     extensions: {
@@ -19,14 +29,20 @@ export const userMutations: MutationResolvers = {
             }
 
             const newUserRequestPayload = new User({
-                name: {
-                    firstName: user.firstName,
-                    lastName: user.lastName
-                },
-                email: user.email,
-                password: user.password,
-                profilePicture: user.profilePicture,
-                phoneNumber: user.phoneNumber,
+                firstName,
+                lastName,
+                email,
+                password,
+                profilePicture,
+                phoneNumber,
+                devices: [
+                    {
+                        deviceId: uuidv4(),
+                        deviceType: 'mobile',
+                        ipAddress: '192.168.1.1',
+                        lastLogin: new Date(), 
+                    }
+                ]
             });
             const userPayload = await newUserRequestPayload.save();
 
@@ -38,21 +54,12 @@ export const userMutations: MutationResolvers = {
                     }
                 });
             }
+
             return {
-                ...userPayload,
+                ...userPayload.toObject(),
                 _id: userPayload._id.toString(),
-                lastLogin: userPayload.lastLogin?.toISOString(),
-                createdAt: userPayload?.createdAt?.toISOString(),
-                updatedAt: userPayload?.updatedAt?.toISOString(),
-                organizationId: userPayload.organizationId ? [userPayload.organizationId.toString()] : [],
-                organizationMembers: userPayload.organizationMembers?.map((organizationMember) => ({
-                    ...organizationMember,
-                    memberId: organizationMember.memberId?.toString()
-                })),
-                devices: userPayload.devices?.map((device) => ({
-                    ...device,
-                    lastLogin: device.lastLogin?.toISOString()
-                }))
+                role: userPayload.role as UserRoleEnum,
+                account: userPayload.account.map((acc: string) => acc as UserAccountEnum),
             };
         } catch (error: any) {
             console.log(error)
@@ -67,8 +74,17 @@ export const userMutations: MutationResolvers = {
     loginUser: async (parent: any, args: any, context: any, info: any) => {
         try {
             const { user } = args;
+            const { email, password } = user;
+            if (!email || !password) {
+                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                    extensions: {
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
+                    }
+                });
+            }
 
-            const userDetails = await User.findOne({ email: user.email }) as IUser;
+            const userDetails = await User.findOne({ email }).select('+password') as IUser;
             if (!userDetails) {
                 throw new GraphQLError("Invalid Credentails", {
                     extensions: {
@@ -78,7 +94,7 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            const isPasswordMatched = await userDetails.comparePassword(user.password);
+            const isPasswordMatched = await userDetails.comparePassword(password);
 
             if (!isPasswordMatched) {
                 throw new GraphQLError("Invalid Credentails", {
@@ -88,36 +104,29 @@ export const userMutations: MutationResolvers = {
                     }
                 });
             }
+
+            const updatedUser = await User.findByIdAndUpdate(
+                userDetails._id,
+                {
+                    $push: {
+                        devices: {
+                            deviceId: uuidv4(),
+                            deviceType:'mobile',
+                            ipAddress: '192.168.1.1',
+                            lastLogin: new Date(),
+                        }
+                    },
+                },
+                { new: true, runValidators: true, useFindAndModify: false }
+            ).lean() as IUser;
             
             return {
-                ...userDetails,
-                _id: userDetails._id.toString(),
-
-                name: userDetails.name ? {
-                    firstName: userDetails.name.firstName,
-                    lastName: userDetails.name.lastName,
-                } : null, // Handle case where name is null
-                email: userDetails.email,
-                // profilePicture: userDetails.profilePicture,
-                // phoneNumber: userDetails.phoneNumber,
-                role: userDetails.role || null, // Ensure role can be null
-                // isVerified: userDetails.isVerified,
-
-                lastLogin: userDetails.lastLogin?.toISOString(),
-                createdAt: userDetails?.createdAt?.toISOString(),
-                updatedAt: userDetails?.updatedAt?.toISOString(),
-                organizationId: userDetails.organizationId ? [userDetails.organizationId.toString()] : [],
-                organizationMembers: userDetails.organizationMembers?.map((organizationMember) => ({
-                    ...organizationMember,
-                    memberId: organizationMember.memberId?.toString()
-                })),
-                devices: userDetails.devices?.map((device) => ({
-                    ...device,
-                    lastLogin: device.lastLogin?.toISOString()
-                }))
+                ...updatedUser,
+                _id: updatedUser._id.toString(),
+                role: updatedUser.role as UserRoleEnum,
+                account: updatedUser.account.map((acc: string) => acc as UserAccountEnum),
             };
         } catch (error: any) {
-            console.log(error)
             throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR, {
                 extensions: {
                     code: StatusCodes.INTERNAL_SERVER_ERROR,

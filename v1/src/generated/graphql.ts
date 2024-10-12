@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
-import { GraphQLResolveInfo } from 'graphql';
+import { GraphQLResolveInfo, GraphQLScalarType, GraphQLScalarTypeConfig } from 'graphql';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -15,21 +15,36 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
+  Date: { input: any; output: any; }
 };
 
-export type CustomRoleType = {
-  __typename?: 'CustomRoleType';
-  name?: Maybe<Scalars['String']['output']>;
-  permissions?: Maybe<Array<Maybe<Scalars['String']['output']>>>;
+export type Address = {
+  __typename?: 'Address';
+  city: Scalars['String']['output'];
+  country: Scalars['String']['output'];
+  postalCode: Scalars['String']['output'];
+  state: Scalars['String']['output'];
+  street: Scalars['String']['output'];
 };
 
-export type DeviceType = {
-  __typename?: 'DeviceType';
-  deviceId?: Maybe<Scalars['String']['output']>;
-  deviceType?: Maybe<Scalars['String']['output']>;
-  ipAddress?: Maybe<Scalars['String']['output']>;
-  lastLogin?: Maybe<Scalars['String']['output']>;
-  userAgent?: Maybe<Scalars['String']['output']>;
+export type BillingInfo = {
+  __typename?: 'BillingInfo';
+  address: Address;
+  phoneNumber: Scalars['String']['output'];
+};
+
+export type Device = {
+  __typename?: 'Device';
+  deviceId: Scalars['String']['output'];
+  deviceType: Scalars['String']['output'];
+  ipAddress: Scalars['String']['output'];
+  lastLogin: Scalars['Date']['output'];
+};
+
+export type LoginAttempt = {
+  __typename?: 'LoginAttempt';
+  count: Scalars['Int']['output'];
+  lastLogin: Scalars['Date']['output'];
 };
 
 export type LoginInput = {
@@ -39,8 +54,8 @@ export type LoginInput = {
 
 export type Mutation = {
   __typename?: 'Mutation';
-  loginUser?: Maybe<UserType>;
-  registerUser?: Maybe<UserType>;
+  loginUser: User;
+  registerUser: User;
 };
 
 
@@ -53,21 +68,9 @@ export type MutationRegisterUserArgs = {
   user: RegisterInput;
 };
 
-export type NameType = {
-  __typename?: 'NameType';
-  firstName?: Maybe<Scalars['String']['output']>;
-  lastName?: Maybe<Scalars['String']['output']>;
-};
-
-export type OrganizationMemberType = {
-  __typename?: 'OrganizationMemberType';
-  memberId?: Maybe<Scalars['String']['output']>;
-  role?: Maybe<Scalars['String']['output']>;
-};
-
 export type Query = {
   __typename?: 'Query';
-  getUser?: Maybe<UserType>;
+  getUser: User;
 };
 
 
@@ -84,24 +87,42 @@ export type RegisterInput = {
   profilePicture?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type UserType = {
-  __typename?: 'UserType';
-  _id?: Maybe<Scalars['ID']['output']>;
-  createdAt?: Maybe<Scalars['String']['output']>;
-  customRoles?: Maybe<Array<Maybe<CustomRoleType>>>;
-  devices?: Maybe<Array<Maybe<DeviceType>>>;
-  email?: Maybe<Scalars['String']['output']>;
-  isOrganization?: Maybe<Scalars['Boolean']['output']>;
-  isVerified?: Maybe<Scalars['Boolean']['output']>;
-  lastLogin?: Maybe<Scalars['String']['output']>;
-  name?: Maybe<NameType>;
-  organizationId?: Maybe<Array<Maybe<Scalars['String']['output']>>>;
-  organizationMembers?: Maybe<Array<Maybe<OrganizationMemberType>>>;
+export type User = {
+  __typename?: 'User';
+  _id: Scalars['ID']['output'];
+  account: Array<UserAccountEnum>;
+  billingInfo?: Maybe<BillingInfo>;
+  createdAt: Scalars['Date']['output'];
+  deactivateReason?: Maybe<Scalars['String']['output']>;
+  deactivateTime?: Maybe<Scalars['Date']['output']>;
+  devices?: Maybe<Array<Device>>;
+  email: Scalars['String']['output'];
+  firstName: Scalars['String']['output'];
+  githubId?: Maybe<Scalars['String']['output']>;
+  googleId?: Maybe<Scalars['String']['output']>;
+  isBlocked: Scalars['Boolean']['output'];
+  isDeactivated: Scalars['Boolean']['output'];
+  isVerified: Scalars['Boolean']['output'];
+  lastName: Scalars['String']['output'];
+  latestSubscription?: Maybe<Scalars['ID']['output']>;
+  loginAttempt?: Maybe<LoginAttempt>;
+  password?: Maybe<Scalars['String']['output']>;
   phoneNumber?: Maybe<Scalars['String']['output']>;
   profilePicture?: Maybe<Scalars['String']['output']>;
-  role?: Maybe<Scalars['String']['output']>;
-  updatedAt?: Maybe<Scalars['String']['output']>;
+  role: UserRoleEnum;
+  updatedAt: Scalars['Date']['output'];
 };
+
+export enum UserAccountEnum {
+  Email = 'EMAIL',
+  Github = 'GITHUB',
+  Google = 'GOOGLE'
+}
+
+export enum UserRoleEnum {
+  Admin = 'ADMIN',
+  User = 'USER'
+}
 
 
 
@@ -174,98 +195,118 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
+  Address: ResolverTypeWrapper<Address>;
+  BillingInfo: ResolverTypeWrapper<BillingInfo>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
-  CustomRoleType: ResolverTypeWrapper<CustomRoleType>;
-  DeviceType: ResolverTypeWrapper<DeviceType>;
+  Date: ResolverTypeWrapper<Scalars['Date']['output']>;
+  Device: ResolverTypeWrapper<Device>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
+  Int: ResolverTypeWrapper<Scalars['Int']['output']>;
+  LoginAttempt: ResolverTypeWrapper<LoginAttempt>;
   LoginInput: LoginInput;
   Mutation: ResolverTypeWrapper<{}>;
-  NameType: ResolverTypeWrapper<NameType>;
-  OrganizationMemberType: ResolverTypeWrapper<OrganizationMemberType>;
   Query: ResolverTypeWrapper<{}>;
   RegisterInput: RegisterInput;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
-  UserType: ResolverTypeWrapper<UserType>;
+  User: ResolverTypeWrapper<User>;
+  UserAccountEnum: UserAccountEnum;
+  UserRoleEnum: UserRoleEnum;
 };
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
+  Address: Address;
+  BillingInfo: BillingInfo;
   Boolean: Scalars['Boolean']['output'];
-  CustomRoleType: CustomRoleType;
-  DeviceType: DeviceType;
+  Date: Scalars['Date']['output'];
+  Device: Device;
   ID: Scalars['ID']['output'];
+  Int: Scalars['Int']['output'];
+  LoginAttempt: LoginAttempt;
   LoginInput: LoginInput;
   Mutation: {};
-  NameType: NameType;
-  OrganizationMemberType: OrganizationMemberType;
   Query: {};
   RegisterInput: RegisterInput;
   String: Scalars['String']['output'];
-  UserType: UserType;
+  User: User;
 };
 
-export type CustomRoleTypeResolvers<ContextType = any, ParentType extends ResolversParentTypes['CustomRoleType'] = ResolversParentTypes['CustomRoleType']> = {
-  name?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  permissions?: Resolver<Maybe<Array<Maybe<ResolversTypes['String']>>>, ParentType, ContextType>;
+export type AddressResolvers<ContextType = any, ParentType extends ResolversParentTypes['Address'] = ResolversParentTypes['Address']> = {
+  city?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  country?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  postalCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  state?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  street?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
-export type DeviceTypeResolvers<ContextType = any, ParentType extends ResolversParentTypes['DeviceType'] = ResolversParentTypes['DeviceType']> = {
-  deviceId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  deviceType?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  ipAddress?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  lastLogin?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  userAgent?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+export type BillingInfoResolvers<ContextType = any, ParentType extends ResolversParentTypes['BillingInfo'] = ResolversParentTypes['BillingInfo']> = {
+  address?: Resolver<ResolversTypes['Address'], ParentType, ContextType>;
+  phoneNumber?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export interface DateScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['Date'], any> {
+  name: 'Date';
+}
+
+export type DeviceResolvers<ContextType = any, ParentType extends ResolversParentTypes['Device'] = ResolversParentTypes['Device']> = {
+  deviceId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  deviceType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  ipAddress?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  lastLogin?: Resolver<ResolversTypes['Date'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type LoginAttemptResolvers<ContextType = any, ParentType extends ResolversParentTypes['LoginAttempt'] = ResolversParentTypes['LoginAttempt']> = {
+  count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  lastLogin?: Resolver<ResolversTypes['Date'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type MutationResolvers<ContextType = any, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
-  loginUser?: Resolver<Maybe<ResolversTypes['UserType']>, ParentType, ContextType, RequireFields<MutationLoginUserArgs, 'user'>>;
-  registerUser?: Resolver<Maybe<ResolversTypes['UserType']>, ParentType, ContextType, RequireFields<MutationRegisterUserArgs, 'user'>>;
-};
-
-export type NameTypeResolvers<ContextType = any, ParentType extends ResolversParentTypes['NameType'] = ResolversParentTypes['NameType']> = {
-  firstName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  lastName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type OrganizationMemberTypeResolvers<ContextType = any, ParentType extends ResolversParentTypes['OrganizationMemberType'] = ResolversParentTypes['OrganizationMemberType']> = {
-  memberId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  role?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+  loginUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationLoginUserArgs, 'user'>>;
+  registerUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationRegisterUserArgs, 'user'>>;
 };
 
 export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
-  getUser?: Resolver<Maybe<ResolversTypes['UserType']>, ParentType, ContextType, RequireFields<QueryGetUserArgs, '_id'>>;
+  getUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<QueryGetUserArgs, '_id'>>;
 };
 
-export type UserTypeResolvers<ContextType = any, ParentType extends ResolversParentTypes['UserType'] = ResolversParentTypes['UserType']> = {
-  _id?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
-  createdAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  customRoles?: Resolver<Maybe<Array<Maybe<ResolversTypes['CustomRoleType']>>>, ParentType, ContextType>;
-  devices?: Resolver<Maybe<Array<Maybe<ResolversTypes['DeviceType']>>>, ParentType, ContextType>;
-  email?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  isOrganization?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
-  isVerified?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
-  lastLogin?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  name?: Resolver<Maybe<ResolversTypes['NameType']>, ParentType, ContextType>;
-  organizationId?: Resolver<Maybe<Array<Maybe<ResolversTypes['String']>>>, ParentType, ContextType>;
-  organizationMembers?: Resolver<Maybe<Array<Maybe<ResolversTypes['OrganizationMemberType']>>>, ParentType, ContextType>;
+export type UserResolvers<ContextType = any, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = {
+  _id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  account?: Resolver<Array<ResolversTypes['UserAccountEnum']>, ParentType, ContextType>;
+  billingInfo?: Resolver<Maybe<ResolversTypes['BillingInfo']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['Date'], ParentType, ContextType>;
+  deactivateReason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  deactivateTime?: Resolver<Maybe<ResolversTypes['Date']>, ParentType, ContextType>;
+  devices?: Resolver<Maybe<Array<ResolversTypes['Device']>>, ParentType, ContextType>;
+  email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  firstName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  githubId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  googleId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  isBlocked?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  isDeactivated?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  isVerified?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  lastName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  latestSubscription?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  loginAttempt?: Resolver<Maybe<ResolversTypes['LoginAttempt']>, ParentType, ContextType>;
+  password?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   phoneNumber?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   profilePicture?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  role?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  updatedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  role?: Resolver<ResolversTypes['UserRoleEnum'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['Date'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type Resolvers<ContextType = any> = {
-  CustomRoleType?: CustomRoleTypeResolvers<ContextType>;
-  DeviceType?: DeviceTypeResolvers<ContextType>;
+  Address?: AddressResolvers<ContextType>;
+  BillingInfo?: BillingInfoResolvers<ContextType>;
+  Date?: GraphQLScalarType;
+  Device?: DeviceResolvers<ContextType>;
+  LoginAttempt?: LoginAttemptResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
-  NameType?: NameTypeResolvers<ContextType>;
-  OrganizationMemberType?: OrganizationMemberTypeResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
-  UserType?: UserTypeResolvers<ContextType>;
+  User?: UserResolvers<ContextType>;
 };
 

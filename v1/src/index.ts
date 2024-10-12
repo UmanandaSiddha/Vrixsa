@@ -40,7 +40,11 @@ async function startServer() {
                     if (req.url === '/' && req.body.operationName === 'IntrospectionQuery') {
                         return { req, res }
                     }
+                    // if (req.body.query.includes('loginUser') && req.body.variables.password) {
+                    //     return { req, res }
+                    // }
                     // const { user } = await authenticate({ req })
+                    // return { req, res, user };
                     return { req, res };
                 } catch (error) {
                     console.log(error);
@@ -50,6 +54,10 @@ async function startServer() {
     );
 
     app.use(cors());
+
+    // app.post('/files/upload', fileController);
+
+    // app.use('/scripts/integrator', integratorRoute);
 
     await new Promise<void>((resolve) => httpServer.listen({ port: process.env.PORT || 4000 }, resolve));
     console.log(`🚀 Server ready at http://localhost:${process.env.PORT || 4000}/`);

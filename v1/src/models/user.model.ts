@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
-// import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+// import { v4 as uuidv4 } from 'uuid';
 // import crypto from "crypto";
 
 export const UserRoleEnum = {
@@ -19,7 +20,6 @@ export interface IDevice extends Document {
     deviceType: string;
     ipAddress: string;
     lastLogin: Date;
-    userAgent: string;
 }
 
 export interface IBillingInfo {
@@ -45,14 +45,14 @@ export interface IUser extends Document {
     account: Array<typeof UserAccountEnum[keyof typeof UserAccountEnum]>;
     isBlocked: boolean;
     isVerified: boolean;
-    googleId: string;
-    githubId: string;
+    googleId?: string;
+    githubId?: string;
     isDeactivated: boolean;
     deactivateReason?: string;
     deactivateTime?: Date;
     devices: IDevice[];
-    billingInfo: IBillingInfo;
-    latestSubsciption: mongoose.Schema.Types.ObjectId;
+    billingInfo?: IBillingInfo;
+    latestSubsciption?: mongoose.Schema.Types.ObjectId;
     loginAttempt: {
         count: number;
         lastLogin: Date;
@@ -61,7 +61,48 @@ export interface IUser extends Document {
     updatedAt: Date;
 
     getJWTToken(): string;
+    comparePassword(enteredPassword: string): Promise<boolean>;
 }
+
+const DeviceSchema: Schema<IDevice> = new mongoose.Schema(
+    {
+        deviceId: { 
+            type: String,
+            required: true,
+        },
+        deviceType: { 
+            type: String, 
+            required: true 
+        },
+        ipAddress: {
+            type: String, 
+            required: true 
+        },
+        lastLogin: { 
+            type: Date, 
+            default: Date.now 
+        }
+    },
+    {
+        _id: false
+    }
+)
+
+const BillingInfoSchema: Schema<IBillingInfo> = new mongoose.Schema(
+    {
+        phoneNumber: String,
+        address: {
+            street: String,
+            city: String,
+            state: String,
+            postalCode: String,
+            country: String,
+        }
+    },
+    {
+        _id: false
+    }
+)
 
 const UserSchema: Schema<IUser> = new mongoose.Schema(
     {
@@ -77,6 +118,7 @@ const UserSchema: Schema<IUser> = new mongoose.Schema(
             type: String,
             required: true,
             unique: true,
+            index: true,
             match: [/.+\@.+\..+/, 'Please enter a valid email address']
         },
         password: {
@@ -116,57 +158,8 @@ const UserSchema: Schema<IUser> = new mongoose.Schema(
         },
         deactivateReason: String,
         deactivateTime: Date,
-        devices: [
-            {
-                deviceId: { 
-                    type: String, 
-                    required: true 
-                },
-                deviceType: { 
-                    type: String, 
-                    required: true 
-                },
-                ipAddress: {
-                    type: String, 
-                    required: true 
-                },
-                lastLogin: { 
-                    type: Date, 
-                    default: Date.now 
-                },
-                userAgent: { 
-                    type: String 
-                }
-            }
-        ],
-        billingInfo: {
-            phoneNumber: {
-                type: String,
-                required: true
-            },
-            address: {
-                street: {
-                    type: String,
-                    required: true
-                },
-                city: {
-                    type: String,
-                    required: true
-                },
-                state: {
-                    type: String,
-                    required: true
-                },
-                postalCode: {
-                    type: String,
-                    required: true
-                },
-                country: {
-                    type: String,
-                    required: true
-                },
-            }
-        },
+        devices: [DeviceSchema],
+        billingInfo: BillingInfoSchema,
         latestSubsciption: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Subscription',
@@ -187,11 +180,31 @@ const UserSchema: Schema<IUser> = new mongoose.Schema(
     }
 );
 
+// Password Hash
+UserSchema.pre<IUser>("save", async function (next) {
+    if (!this.isModified("password")) {
+        return next();
+    }
+    if (this.password) {
+        this.password = await bcrypt.hash(this.password, 10);
+    }
+    next();
+});
+
 // JWT Token
 UserSchema.methods.getJWTToken = function (this: IUser) {
     return jwt.sign({ id: this._id }, process.env.JWT_SECRET!, {
         expiresIn: process.env.JWT_EXPIRE,
     });
+};
+
+// Compare Password
+UserSchema.methods.comparePassword = async function (this: IUser, enteredPassword: string) {
+    let isPasswordMatched;
+    if (this.password) {
+        isPasswordMatched = await bcrypt.compare(enteredPassword, this.password);
+    }
+    return isPasswordMatched;
 };
 
 const User = mongoose.model<IUser>("User", UserSchema);

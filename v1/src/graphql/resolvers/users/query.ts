@@ -1,6 +1,6 @@
 import { GraphQLError } from "graphql";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
-import { QueryResolvers } from "../../../generated/graphql.js";
+import { QueryResolvers, UserAccountEnum, UserRoleEnum } from "../../../generated/graphql.js";
 import User, { IUser } from "../../../models/user.model.js";
 
 export const userResolvers: QueryResolvers = {
@@ -29,21 +29,10 @@ export const userResolvers: QueryResolvers = {
             return {
                 ...userDetails,
                 _id: userDetails._id.toString(),
-                lastLogin: userDetails.lastLogin?.toISOString(),
-                createdAt: userDetails?.createdAt?.toISOString(),
-                updatedAt: userDetails?.updatedAt?.toISOString(),
-                organizationId: userDetails.organizationId ? [userDetails.organizationId.toString()] : [],
-                organizationMembers: userDetails.organizationMembers?.map((organizationMember) => ({
-                    ...organizationMember,
-                    memberId: organizationMember.memberId?.toString()
-                })),
-                devices: userDetails.devices?.map((device) => ({
-                    ...device,
-                    lastLogin: device.lastLogin?.toISOString()
-                }))
-            };
+                role: userDetails.role as UserRoleEnum,
+                account: userDetails.account.map((acc: string) => acc as UserAccountEnum),
+            }
         } catch (error: any) {
-            console.log(error)
             throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
                 extensions: {
                     code: StatusCodes.BAD_REQUEST,
