@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import User, { IUser } from "../../../models/user.model.js";
 import { MutationResolvers, UserAccountEnum, UserRoleEnum } from "../../../generated/graphql.js";
+import sendToken from "../../../utils/jwtToken.js";
 
 export const userMutations: MutationResolvers = {
     registerUser: async (parent: any, args: any, context: any, info: any) => {
@@ -54,6 +55,11 @@ export const userMutations: MutationResolvers = {
                     }
                 });
             }
+
+            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = sendToken(userDetails);
+
+            context.res.cookie("accessToken", accessToken, accessTokenOptions);
+            context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
 
             return {
                 ...userPayload.toObject(),
@@ -119,6 +125,11 @@ export const userMutations: MutationResolvers = {
                 },
                 { new: true, runValidators: true, useFindAndModify: false }
             ).lean() as IUser;
+
+            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = sendToken(userDetails);
+
+            context.res.cookie("accessToken", accessToken, accessTokenOptions);
+            context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
             
             return {
                 ...updatedUser,

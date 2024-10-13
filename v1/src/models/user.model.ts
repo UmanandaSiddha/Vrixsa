@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 // import { v4 as uuidv4 } from 'uuid';
-// import crypto from "crypto";
+import crypto from "crypto";
 
 export const UserRoleEnum = {
     USER: "USER",
@@ -57,11 +57,19 @@ export interface IUser extends Document {
         count: number;
         lastLogin: Date;
     },
+    refreshToken: string;
+    oneTimePassword?: string;
+    oneTimeExpire?: Date;
+    resetPasswordToken?: string;
+    resetPasswordExpire?: Date;
     createdAt: Date;
     updatedAt: Date;
 
-    getJWTToken(): string;
+    generateAccessToken(): string;
+	generateRefreshToken(): string;
     comparePassword(enteredPassword: string): Promise<boolean>;
+    getResetPasswordToken(): string;
+    getOneTimePassword(): string;
 }
 
 const DeviceSchema: Schema<IDevice> = new mongoose.Schema(
@@ -174,6 +182,7 @@ const UserSchema: Schema<IUser> = new mongoose.Schema(
                 default: Date.now
             },
         },
+        refreshToken: String,
     },
     {
         timestamps: true,
@@ -191,11 +200,30 @@ UserSchema.pre<IUser>("save", async function (next) {
     next();
 });
 
-// JWT Token
-UserSchema.methods.getJWTToken = function (this: IUser) {
-    return jwt.sign({ id: this._id }, process.env.JWT_SECRET!, {
-        expiresIn: process.env.JWT_EXPIRE,
-    });
+// Access Token
+UserSchema.methods.generateAccessToken = function (this: IUser) {
+	const token = jwt.sign(
+		{
+			id: this._id,
+			email: this.email,
+            role: this.role,
+            // account: this.account,
+		},
+		process.env.ACCESS_TOKEN_SECRET!, 
+		{ expiresIn: process.env.ACCESS_TOKEN_EXPIRE }
+	);
+    return token;
+};
+
+// Refresh Token
+UserSchema.methods.generateRefreshToken = function (this: IUser) {
+	const token = jwt.sign(
+		{ id: this._id },
+		process.env.REFRESH_TOKEN_SECRET!,
+		{ expiresIn: process.env.REFRESH_TOKEN_EXPIRE }
+	);
+    this.refreshToken = token;
+    return token;
 };
 
 // Compare Password
@@ -205,6 +233,34 @@ UserSchema.methods.comparePassword = async function (this: IUser, enteredPasswor
         isPasswordMatched = await bcrypt.compare(enteredPassword, this.password);
     }
     return isPasswordMatched;
+};
+
+// Generating Password Reset Token
+UserSchema.methods.getResetPasswordToken = function (this: IUser) {
+    const resetToken = crypto.randomBytes(20).toString("hex");
+
+    this.resetPasswordToken = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+    this.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000);
+
+    return resetToken;
+};
+
+// Generating One Time Password
+UserSchema.methods.getOneTimePassword = function (this: IUser) {
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    this.oneTimePassword = crypto
+        .createHash("sha256")
+        .update(otp.toString())
+        .digest("hex");
+
+    this.oneTimeExpire = new Date(Date.now() + 15 * 60 * 1000);
+
+    return otp.toString();
 };
 
 const User = mongoose.model<IUser>("User", UserSchema);
