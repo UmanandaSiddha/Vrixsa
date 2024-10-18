@@ -1,5 +1,3 @@
-import express from 'express';
-import cors from 'cors';
 import http from 'http';
 import dotenv from "dotenv";
 import Redis from "ioredis";
@@ -12,7 +10,7 @@ dotenv.config();
 
 import { resolvers } from './graphql/resolvers.js';
 import { typeDefs } from './graphql/typeDefs.js';
-import app, { corsOptions } from './app.js';
+import app from './app.js';
 
 export const redis = new Redis.default();
 const PORT = process.env.PORT || 8081;
@@ -35,8 +33,8 @@ async function startServer() {
 
     app.use(
         '/graphql',
-        cors(corsOptions),
-        express.json({ limit: '50mb' }),
+        // cors(corsOptions),
+        // express.json({ limit: '50mb' }),
         expressMiddleware(server, {
             context: async ({ req, res }): Promise<any> => {
                 try {

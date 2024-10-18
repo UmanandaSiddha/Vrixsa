@@ -2,7 +2,7 @@ import { rateLimit, Options } from 'express-rate-limit';
 
 const limiterOptions: Partial<Options> = {
 	windowMs: 15 * 60 * 1000,
-	limit: 150,
+	limit: 100,
 	standardHeaders: 'draft-7',
 	legacyHeaders: false,
 };

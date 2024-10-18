@@ -35,10 +35,14 @@ export type BillingInfo = {
 
 export type Device = {
   __typename?: 'Device';
+  broswer: Scalars['String']['output'];
   deviceId: Scalars['String']['output'];
   deviceType: Scalars['String']['output'];
   ipAddress: Scalars['String']['output'];
   lastLogin: Scalars['Date']['output'];
+  os: Scalars['String']['output'];
+  platform: Scalars['String']['output'];
+  version: Scalars['String']['output'];
 };
 
 export type LoginAttempt = {
@@ -251,10 +255,14 @@ export interface DateScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes
 }
 
 export type DeviceResolvers<ContextType = any, ParentType extends ResolversParentTypes['Device'] = ResolversParentTypes['Device']> = {
+  broswer?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   deviceId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   deviceType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   ipAddress?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   lastLogin?: Resolver<ResolversTypes['Date'], ParentType, ContextType>;
+  os?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  platform?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  version?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 

@@ -1,7 +1,7 @@
 import { Job, Queue, Worker } from "bullmq";
 import { emailQueueName, jobOptions, redisConnection } from "../config/queue.js";
+import { redis } from "../index.js";
 import sendEmail from "./sendEmail.js";
-import { redis } from "../server.js";
 
 interface EmailData {
     email: string;
@@ -15,14 +15,14 @@ export const emailQueue = new Queue<EmailData>(emailQueueName, {
 });
 
 export const addEmailToQueue = async (data: EmailData) => {
-    const result = await redis.xlen("bull:vrixsa_email-queue:events");
+    const result = await redis.xlen(`bull:${emailQueueName}:events`);
     if (result > 0) {
-        await redis.del("bull:vrixsa_email-queue:events");
+        await redis.del(`bull:${emailQueueName}:events`);
     }
 
-    const id = await redis.get("bull:vrixsa_email-queue:id");
+    const id = await redis.get(`bull:${emailQueueName}:id`);
     if (Number(id) > 99) {
-        await redis.set("bull:vrixsa_email-queue:id", "0");
+        await redis.set(`bull:${emailQueueName}:id`, "0");
     }
 
     const { email, subject, message } = data;

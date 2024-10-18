@@ -1,28 +1,48 @@
-import { CookieOptions, Response } from "express";
-import { IUser } from "../models/userModel.js";
+import { CookieOptions } from "express";
+import { IUser } from "../models/user.model.js";
 
-const sendToken = (user: IUser, statusCode: number, res: Response) => {
-    const token = user.getJWTToken();
+interface TokenResponse {
+    accessToken: string;
+    refreshToken: string;
+    accessTokenOptions: CookieOptions;
+    refreshTokenOptions: CookieOptions;
+}
 
-    const cookieExpireDays = Number(process.env.COOKIE_EXPIRE);
-    if (isNaN(cookieExpireDays)) {
+const generateOptions = (expireTime: number) => {
+    if (isNaN(expireTime)) {
         throw new Error("Invalid COOKIE_EXPIRE environment variable");
     }
 
     const options: CookieOptions = {
         expires: new Date(
-            Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000
+            Date.now() + expireTime
         ),
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: 'strict',
     };
+    
+    return options;
+}
 
-    res.status(statusCode).cookie("token", token, options).json({
-        success: true,
-        user,
-        token,
-    });
+const sendToken = async (user: IUser): Promise<TokenResponse> => {
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    await user.save({ validateBeforeSave: false });
+
+    const cookieExpireDays = Number(process.env.REFRESH_COOKIE_EXPIRE) * 24 * 60 * 60 * 1000;
+    const cookieExpireMinutes = Number(process.env.ACCESS_COOKIE_EXPIRE) * 60 * 1000;
+
+    const accessTokenOptions = generateOptions(cookieExpireMinutes);
+    const refreshTokenOptions = generateOptions(cookieExpireDays);
+
+    return {
+        accessToken,
+        refreshToken,
+        accessTokenOptions,
+        refreshTokenOptions,
+    }
 };
 
 export default sendToken;

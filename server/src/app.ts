@@ -1,17 +1,11 @@
-import express, { Application } from "express";
+import express, { Application } from 'express';
+import cors, { CorsOptions } from 'cors';
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
-import cors, { CorsOptions } from "cors";
 import helmet from "helmet";
-import limiter from "./config/rateLimiter.js";
-import ErrorMiddleware from "./middlewares/error.js";
-
-import user from "./routes/userRoute.js";
-// import payment from "./routes/PaymentRoute.js";
-import product from "./routes/productRoute.js";
-import order from "./routes/orderRoute.js";
-import notification from "./routes/notificationRoute.js";
-import admin from "./routes/adminRoute.js";
+import limiter from './config/rateLimiter.js';
+import ErrorMiddleware from './middlewares/error.js';
+import useragent from 'express-useragent';
 
 const app: Application = express();
 
@@ -32,21 +26,15 @@ const corsOptions: CorsOptions = {
     credentials: true,
 };
 
-app.set('trust proxy', 1);
-app.use(cors(corsOptions));
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(limiter);
 app.use(cookieParser());
-app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
-app.use(express.json({ limit: "50mb" }));
+app.use(cors(corsOptions));
+app.set('trust proxy', true);
+app.use(useragent.express());
 app.use(express.static("public"));
-
-app.use("/api/v1/user", user);
-// app.use("/api/v1/payment", payment);
-app.use("/api/v1/product", product);
-app.use("/api/v1/order", order);
-app.use("/api/v1/notification",notification);
-app.use("/api/v1/admin", admin);
+app.use(express.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
 app.use(ErrorMiddleware);
 

@@ -1,8 +1,8 @@
-export const emailQueueName = "vrixsa_email-queue";
+export const emailQueueName = "VRIXAA";
 
 export const redisConnection = {
     host: process.env.REDIS_HOST, 
-    port: Number(process.env.REDIS_PORT),        
+    port: process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : undefined,     
 }
 
 export const jobOptions = {

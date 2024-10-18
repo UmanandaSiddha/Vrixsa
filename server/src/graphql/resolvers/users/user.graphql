@@ -18,6 +18,10 @@ type Device {
     deviceId: String!
     deviceType: String!
     ipAddress: String!
+    broswer: String!
+    version: String!
+    os: String!
+    platform: String!
     lastLogin: Date!
 }
 

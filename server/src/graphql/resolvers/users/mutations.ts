@@ -29,6 +29,11 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
+            const forwarded = context.req.headers['x-forwarded-for'] as string;
+            const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
+            const source = context.req.useragent;
+            const deviceType = source.isMobile ? 'Mobile' : source.isTablet ? 'Tablet' : source.isDesktop ? 'Desktop' : 'Unknown';
+
             const newUserRequestPayload = new User({
                 firstName,
                 lastName,
@@ -39,9 +44,13 @@ export const userMutations: MutationResolvers = {
                 devices: [
                     {
                         deviceId: uuidv4(),
-                        deviceType: 'mobile',
-                        ipAddress: '192.168.1.1',
-                        lastLogin: new Date(), 
+                        deviceType,
+                        ipAddress: ip,
+                        browser: source.browser,
+                        version: source.version,
+                        os: source.os,
+                        platform: source.platform,
+                        lastLogin: Date.now(),
                     }
                 ]
             });
@@ -56,7 +65,7 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = sendToken(userDetails);
+            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(userDetails);
 
             context.res.cookie("accessToken", accessToken, accessTokenOptions);
             context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
@@ -111,22 +120,31 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
+            const forwarded = context.req.headers['x-forwarded-for'] as string;
+            const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
+            const source = context.req.useragent;
+            const deviceType = source.isMobile ? 'Mobile' : source.isTablet ? 'Tablet' : source.isDesktop ? 'Desktop' : 'Unknown';
+
             const updatedUser = await User.findByIdAndUpdate(
                 userDetails._id,
                 {
                     $push: {
                         devices: {
                             deviceId: uuidv4(),
-                            deviceType:'mobile',
-                            ipAddress: '192.168.1.1',
-                            lastLogin: new Date(),
+                            deviceType,
+                            ipAddress: ip,
+                            browser: source.browser,
+                            version: source.version,
+                            os: source.os,
+                            platform: source.platform,
+                            lastLogin: Date.now(),
                         }
                     },
                 },
                 { new: true, runValidators: true, useFindAndModify: false }
             ).lean() as IUser;
 
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = sendToken(userDetails);
+            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(userDetails);
 
             context.res.cookie("accessToken", accessToken, accessTokenOptions);
             context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
