@@ -18,9 +18,11 @@ const generateOptions = (expireTime: number) => {
     return options;
 }
 
-const sendToken = (user: IUser) => {
+const sendToken = async (user: IUser) => {
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
+
+    await user.save({ validateBeforeSave: false });
 
     const cookieExpireDays = Number(process.env.REFRESH_COOKIE_EXPIRE) * 24 * 60 * 60 * 1000;
     const cookieExpireMinutes = Number(process.env.ACCESS_COOKIE_EXPIRE) * 60 * 1000;
