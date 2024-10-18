@@ -19,7 +19,7 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            const userDetails = await User.findOne({ email }).lean() as IUser;
+            const userDetails = await User.findOne({ email }) as IUser;
             if (userDetails) {
                 throw new GraphQLError("User already exits", {
                     extensions: {
@@ -46,10 +46,10 @@ export const userMutations: MutationResolvers = {
                         deviceId: uuidv4(),
                         deviceType,
                         ipAddress: ip,
-                        browser: source.browser,
-                        version: source.version,
-                        os: source.os,
-                        platform: source.platform,
+                        browser: source.browser || 'Unknown',
+                        version: source.version || 'Unknown',
+                        os: source.os || 'Unknown',
+                        platform: source.platform || 'Unknown',
                         lastLogin: Date.now(),
                     }
                 ]
@@ -65,7 +65,7 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(userDetails);
+            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(newUserRequestPayload);
 
             context.res.cookie("accessToken", accessToken, accessTokenOptions);
             context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
