@@ -18,7 +18,7 @@ type Device {
     deviceId: String!
     deviceType: String!
     ipAddress: String!
-    broswer: String!
+    browser: String!
     version: String!
     os: String!
     platform: String!
@@ -79,6 +79,30 @@ input LoginInput {
     password: String
 }
 
+input ResetPasswordInput {
+    oldPassword: String
+    newPassword: String
+    confirmPassword: String
+}
+
+input SetPasswordInput {
+    newPassword: String
+    confirmPassword: String
+}
+
+input ForgotPasswordInput {
+    userId: String
+    token: String
+    newPassword: String
+    confirmPassword: String
+}
+
+input UpdateProfileInput {
+    firstName: String
+    lastName: String
+    phoneNumber: String
+}
+
 type Query {
     getUser(_id: ID!): User!
 }
@@ -86,4 +110,10 @@ type Query {
 type Mutation {
     registerUser(user: RegisterInput!): User!
     loginUser(user: LoginInput!): User!
+    verifyUser(otp: String!): User!
+    resetPassword(data: ResetPasswordInput!): User!
+    setPassword(data: SetPasswordInput!): User!
+    forgotPassword(data: ForgotPasswordInput!): User!
+    updateProfile(data: UpdateProfileInput!): User!
+    googleLogin(token: String!): User!
 }

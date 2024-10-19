@@ -35,7 +35,7 @@ export type BillingInfo = {
 
 export type Device = {
   __typename?: 'Device';
-  broswer: Scalars['String']['output'];
+  browser: Scalars['String']['output'];
   deviceId: Scalars['String']['output'];
   deviceType: Scalars['String']['output'];
   ipAddress: Scalars['String']['output'];
@@ -43,6 +43,13 @@ export type Device = {
   os: Scalars['String']['output'];
   platform: Scalars['String']['output'];
   version: Scalars['String']['output'];
+};
+
+export type ForgotPasswordInput = {
+  confirmPassword?: InputMaybe<Scalars['String']['input']>;
+  newPassword?: InputMaybe<Scalars['String']['input']>;
+  token?: InputMaybe<Scalars['String']['input']>;
+  userId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type LoginAttempt = {
@@ -58,8 +65,24 @@ export type LoginInput = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  forgotPassword: User;
+  googleLogin: User;
   loginUser: User;
   registerUser: User;
+  resetPassword: User;
+  setPassword: User;
+  updateProfile: User;
+  verifyUser: User;
+};
+
+
+export type MutationForgotPasswordArgs = {
+  data: ForgotPasswordInput;
+};
+
+
+export type MutationGoogleLoginArgs = {
+  token: Scalars['String']['input'];
 };
 
 
@@ -70,6 +93,26 @@ export type MutationLoginUserArgs = {
 
 export type MutationRegisterUserArgs = {
   user: RegisterInput;
+};
+
+
+export type MutationResetPasswordArgs = {
+  data: ResetPasswordInput;
+};
+
+
+export type MutationSetPasswordArgs = {
+  data: SetPasswordInput;
+};
+
+
+export type MutationUpdateProfileArgs = {
+  data: UpdateProfileInput;
+};
+
+
+export type MutationVerifyUserArgs = {
+  otp: Scalars['String']['input'];
 };
 
 export type Query = {
@@ -89,6 +132,23 @@ export type RegisterInput = {
   password?: InputMaybe<Scalars['String']['input']>;
   phoneNumber?: InputMaybe<Scalars['String']['input']>;
   profilePicture?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ResetPasswordInput = {
+  confirmPassword?: InputMaybe<Scalars['String']['input']>;
+  newPassword?: InputMaybe<Scalars['String']['input']>;
+  oldPassword?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SetPasswordInput = {
+  confirmPassword?: InputMaybe<Scalars['String']['input']>;
+  newPassword?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateProfileInput = {
+  firstName?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  phoneNumber?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type User = {
@@ -204,6 +264,7 @@ export type ResolversTypes = {
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Date: ResolverTypeWrapper<Scalars['Date']['output']>;
   Device: ResolverTypeWrapper<Device>;
+  ForgotPasswordInput: ForgotPasswordInput;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   LoginAttempt: ResolverTypeWrapper<LoginAttempt>;
@@ -211,7 +272,10 @@ export type ResolversTypes = {
   Mutation: ResolverTypeWrapper<{}>;
   Query: ResolverTypeWrapper<{}>;
   RegisterInput: RegisterInput;
+  ResetPasswordInput: ResetPasswordInput;
+  SetPasswordInput: SetPasswordInput;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
+  UpdateProfileInput: UpdateProfileInput;
   User: ResolverTypeWrapper<User>;
   UserAccountEnum: UserAccountEnum;
   UserRoleEnum: UserRoleEnum;
@@ -224,6 +288,7 @@ export type ResolversParentTypes = {
   Boolean: Scalars['Boolean']['output'];
   Date: Scalars['Date']['output'];
   Device: Device;
+  ForgotPasswordInput: ForgotPasswordInput;
   ID: Scalars['ID']['output'];
   Int: Scalars['Int']['output'];
   LoginAttempt: LoginAttempt;
@@ -231,7 +296,10 @@ export type ResolversParentTypes = {
   Mutation: {};
   Query: {};
   RegisterInput: RegisterInput;
+  ResetPasswordInput: ResetPasswordInput;
+  SetPasswordInput: SetPasswordInput;
   String: Scalars['String']['output'];
+  UpdateProfileInput: UpdateProfileInput;
   User: User;
 };
 
@@ -255,7 +323,7 @@ export interface DateScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes
 }
 
 export type DeviceResolvers<ContextType = any, ParentType extends ResolversParentTypes['Device'] = ResolversParentTypes['Device']> = {
-  broswer?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  browser?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   deviceId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   deviceType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   ipAddress?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -273,8 +341,14 @@ export type LoginAttemptResolvers<ContextType = any, ParentType extends Resolver
 };
 
 export type MutationResolvers<ContextType = any, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
+  forgotPassword?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationForgotPasswordArgs, 'data'>>;
+  googleLogin?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationGoogleLoginArgs, 'token'>>;
   loginUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationLoginUserArgs, 'user'>>;
   registerUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationRegisterUserArgs, 'user'>>;
+  resetPassword?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationResetPasswordArgs, 'data'>>;
+  setPassword?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationSetPasswordArgs, 'data'>>;
+  updateProfile?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationUpdateProfileArgs, 'data'>>;
+  verifyUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationVerifyUserArgs, 'otp'>>;
 };
 
 export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {

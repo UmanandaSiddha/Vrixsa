@@ -13,7 +13,7 @@ const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
         const allowedOrigins = [
             "http://localhost:5173",
-            "http://localhost:5174",
+            "http://localhost:8081",
         ];
 
         if (!origin || allowedOrigins.includes(origin as string)) {
@@ -26,10 +26,10 @@ const corsOptions: CorsOptions = {
     credentials: true,
 };
 
-app.use(limiter);
+// app.use(limiter);
 app.use(cookieParser());
 app.use(cors(corsOptions));
-app.set('trust proxy', true);
+app.set('trust proxy', process.env.NODE_ENV === 'production' ? true : false);
 app.use(useragent.express());
 app.use(express.static("public"));
 app.use(express.json({ limit: "50mb" }));

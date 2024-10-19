@@ -19,7 +19,7 @@ export interface IDevice extends Document {
     deviceId: string;
     deviceType: string;
     ipAddress: string;
-    broswer: string;
+    browser: string;
     version: string;
     os: string;
     platform: string;
@@ -90,7 +90,7 @@ const DeviceSchema: Schema<IDevice> = new mongoose.Schema(
             type: String, 
             required: true 
         },
-        broswer: {
+        browser: {
             type: String, 
             required: true 
         },
