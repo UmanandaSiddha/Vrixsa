@@ -175,6 +175,7 @@ export const userMutations: MutationResolvers = {
             if (deviceId && userDetails.devices.some((data: IDevice) => data.deviceId === deviceId)) {
                 const deviceData = userDetails.devices.find((data: IDevice) => data.deviceId === deviceId);
                 if (deviceData && (deviceData.deviceType === deviceType || deviceData.browser === source.browser || deviceData.os === source.os)) {
+                    deviceData.lastLogin = new Date();
                     sendToken(userDetails, context.res);
                 } else {
                     throw new GraphQLError("Device mismatch", {
@@ -641,6 +642,10 @@ export const userMutations: MutationResolvers = {
                 }
 
                 if (deviceId && user.devices.some((data: IDevice) => data.deviceId === deviceId)) {
+                    const deviceData = user.devices.find((data: IDevice) => data.deviceId === deviceId);
+                    if (deviceData) {
+                        deviceData.lastLogin = new Date();
+                    }
                     sendToken(user, context.res);
                 } else {
                     const newDeviceId = uuidv4();
