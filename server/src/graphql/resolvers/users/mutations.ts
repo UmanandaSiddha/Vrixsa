@@ -2,7 +2,7 @@ import { GraphQLError } from "graphql";
 import { v4 as uuidv4 } from 'uuid';
 import crypto from "crypto";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
-import User, { IUser } from "../../../models/user.model.js";
+import User, { IDevice, IUser } from "../../../models/user.model.js";
 import { MutationResolvers, UserAccountEnum, UserRoleEnum } from "../../../generated/graphql.js";
 import sendToken from "../../../utils/jwtToken.js";
 import { addEmailToQueue } from "../../../utils/emailQueue.js";
@@ -14,10 +14,10 @@ export const userMutations: MutationResolvers = {
             const { user } = args;
             const { email, password, firstName, lastName, profilePicture, phoneNumber } = user;
             if (!email || !password || !firstName || !lastName) {
-                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                throw new GraphQLError("All fields are required", {
                     extensions: {
-                        code: StatusCodes.BAD_REQUEST,
-                        http: { status: StatusCodes.BAD_REQUEST }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
@@ -26,8 +26,8 @@ export const userMutations: MutationResolvers = {
             if (userDetails) {
                 throw new GraphQLError("User already exits", {
                     extensions: {
-                        code: StatusCodes.NOT_FOUND,
-                        http: { status: StatusCodes.NOT_FOUND }
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
                     }
                 });
             }
@@ -35,7 +35,17 @@ export const userMutations: MutationResolvers = {
             const forwarded = context.req.headers['x-forwarded-for'] as string;
             const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
             const source = context.req.useragent;
+            if (!source) {
+                throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + "Unable to verify device information", {
+                    extensions: {
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
+                    }
+                });
+            }
             const deviceType = source.isMobile ? 'Mobile' : source.isTablet ? 'Tablet' : source.isDesktop ? 'Desktop' : 'Unknown';
+
+            const deviceId = uuidv4()
 
             const newUserRequestPayload = new User({
                 firstName,
@@ -47,7 +57,7 @@ export const userMutations: MutationResolvers = {
                 role: email === process.env.ADMIN_EMAIL ? UserRoleEnum.Admin : UserRoleEnum.User,
                 devices: [
                     {
-                        deviceId: uuidv4(),
+                        deviceId,
                         deviceType,
                         ipAddress: ip,
                         browser: source.browser || "Unknown",
@@ -58,6 +68,7 @@ export const userMutations: MutationResolvers = {
                     }
                 ]
             });
+
             const userPayload = await newUserRequestPayload.save();
 
             if (!userPayload) {
@@ -69,14 +80,16 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            const otp = user.getOneTimePassword();
-            await user.save({ validateBeforeSave: false });
+            sendToken(userPayload, context.res, deviceId);
+
+            const otp = userPayload.getOneTimePassword();
+            await userPayload.save({ validateBeforeSave: false });
 
             const message = `Email verification OTP ( valid for 15 minutes ) :- \n\n ${otp} \n\n Please ignore if you didn't requested this email.`;
 
             try {
                 await addEmailToQueue({
-                    email: user.email,
+                    email: userPayload.email,
                     subject: `Email Veification`,
                     message,
                 });
@@ -85,11 +98,6 @@ export const userMutations: MutationResolvers = {
                 user.oneTimeExpire = undefined;
                 await user.save({ validateBeforeSave: false });
             }
-
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(userPayload);
-
-            context.res.cookie("accessToken", accessToken, accessTokenOptions);
-            context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
 
             return {
                 ...userPayload.toObject(),
@@ -112,10 +120,10 @@ export const userMutations: MutationResolvers = {
             const { user } = args;
             const { email, password } = user;
             if (!email || !password) {
-                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                throw new GraphQLError("All fields are required", {
                     extensions: {
-                        code: StatusCodes.BAD_REQUEST,
-                        http: { status: StatusCodes.BAD_REQUEST }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
@@ -124,28 +132,27 @@ export const userMutations: MutationResolvers = {
             if (!userDetails) {
                 throw new GraphQLError("Invalid Credentails", {
                     extensions: {
-                        code: StatusCodes.NOT_FOUND,
-                        http: { status: StatusCodes.NOT_FOUND }
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
                     }
                 });
             }
-
             if (userDetails.isBlocked) {
-                throw new GraphQLError("IAccount is blocked", {
+                throw new GraphQLError("Account is blocked", {
                     extensions: {
                         code: StatusCodes.FORBIDDEN,
                         http: { status: StatusCodes.FORBIDDEN }
                     }
                 });
-            }        
+            }
 
             const isPasswordMatched = await userDetails.comparePassword(password);
 
             if (!isPasswordMatched) {
                 throw new GraphQLError("Invalid Credentails", {
                     extensions: {
-                        code: StatusCodes.NOT_FOUND,
-                        http: { status: StatusCodes.NOT_FOUND }
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
                     }
                 });
             }
@@ -153,37 +160,61 @@ export const userMutations: MutationResolvers = {
             const forwarded = context.req.headers['x-forwarded-for'] as string;
             const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
             const source = context.req.useragent;
+            if (!source) {
+                throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + "Unable to verify device information", {
+                    extensions: {
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
+                    }
+                });
+            }
             const deviceType = source.isMobile ? 'Mobile' : source.isTablet ? 'Tablet' : source.isDesktop ? 'Desktop' : 'Unknown';
 
-            const updatedUser = await User.findByIdAndUpdate(
-                userDetails._id,
-                {
-                    $push: {
-                        devices: {
-                            deviceId: uuidv4(),
-                            deviceType,
-                            ipAddress: ip,
-                            browser: source.browser,
-                            version: source.version,
-                            os: source.os,
-                            platform: source.platform,
-                            lastLogin: Date.now(),
+            const deviceId = context.req.cookies["_device"] as string | undefined;
+
+            if (deviceId && userDetails.devices.some((data: IDevice) => data.deviceId === deviceId)) {
+                const deviceData = userDetails.devices.find((data: IDevice) => data.deviceId === deviceId);
+                if (deviceData && (deviceData.deviceType === deviceType || deviceData.browser === source.browser || deviceData.os === source.os)) {
+                    sendToken(userDetails, context.res);
+                } else {
+                    throw new GraphQLError("Device mismatch", {
+                        extensions: {
+                            code: StatusCodes.BAD_REQUEST,
+                            http: { status: StatusCodes.BAD_REQUEST }
                         }
+                    });
+                }
+            } else {
+                const newDeviceId = uuidv4();    
+                await User.findByIdAndUpdate(
+                    userDetails._id,
+                    {
+                        $push: {
+                            devices: {
+                                deviceId: newDeviceId,
+                                deviceType,
+                                ipAddress: ip,
+                                browser: source.browser,
+                                version: source.version,
+                                os: source.os,
+                                platform: source.platform,
+                                lastLogin: Date.now(),
+                            }
+                        },
                     },
-                },
-                { new: true, runValidators: true, useFindAndModify: false }
-            ).lean() as IUser;
-
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(userDetails);
-
-            context.res.cookie("accessToken", accessToken, accessTokenOptions);
-            context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
+                    { new: true, runValidators: true, useFindAndModify: false }
+                ).lean() as IUser;
+    
+                sendToken(userDetails, context.res, newDeviceId);
+            }
             
+            await userDetails.save({ validateBeforeSave: false });
+
             return {
-                ...updatedUser,
-                _id: updatedUser._id.toString(),
-                role: updatedUser.role as UserRoleEnum,
-                account: updatedUser.account.map((acc: string) => acc as UserAccountEnum),
+                ...userDetails.toObject(),
+                _id: userDetails._id.toString(),
+                role: userDetails.role as UserRoleEnum,
+                account: userDetails.account.map((acc: string) => acc as UserAccountEnum),
             };
         } catch (error: any) {
             console.log(error)
@@ -199,10 +230,10 @@ export const userMutations: MutationResolvers = {
         try {
             const { otp } = args;
             if (!otp) {
-                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                throw new GraphQLError("OTP is required", {
                     extensions: {
-                        code: StatusCodes.BAD_REQUEST,
-                        http: { status: StatusCodes.BAD_REQUEST }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
@@ -219,7 +250,7 @@ export const userMutations: MutationResolvers = {
             });
 
             if (!user) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("User not found", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
@@ -230,14 +261,14 @@ export const userMutations: MutationResolvers = {
             user.isVerified = true;
             user.oneTimePassword = undefined;
             user.oneTimeExpire = undefined;
-        
-        
+
+            sendToken(user, context.res);
             const savedUser = await user.save();
-        
+
             const message = savedUser
                 ? "Account Verified Successfully!!"
                 : "Account Verification Failed, Please try again later.";
-        
+
             try {
                 await addEmailToQueue({
                     email: user.email,
@@ -247,11 +278,6 @@ export const userMutations: MutationResolvers = {
             } catch (error) {
                 console.log((error as Error).message);
             }
-
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(user);
-
-            context.res.cookie("accessToken", accessToken, accessTokenOptions);
-            context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
 
             return {
                 ...user.toObject(),
@@ -274,17 +300,17 @@ export const userMutations: MutationResolvers = {
             const { data } = args;
             const { oldPassword, newPassword, confirmPassword } = data;
             if (!oldPassword || !newPassword || !confirmPassword) {
-                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                throw new GraphQLError("All fields are required", {
                     extensions: {
-                        code: StatusCodes.BAD_REQUEST,
-                        http: { status: StatusCodes.BAD_REQUEST }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
 
             const userDetails = await User.findById(context.req.user?._id).select('+password') as IUser;
             if (!userDetails) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("User not found", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
@@ -295,25 +321,25 @@ export const userMutations: MutationResolvers = {
             const isPasswordMatched = await userDetails.comparePassword(oldPassword);
 
             if (!isPasswordMatched) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("Incorrect Password", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
-        
+
             if (newPassword !== confirmPassword) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("Password mismatch", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
-        
+
             userDetails.password = newPassword;
-        
+
             await userDetails.save();
 
             return {
@@ -337,16 +363,16 @@ export const userMutations: MutationResolvers = {
             const { data } = args;
             const { newPassword, confirmPassword } = data;
             if (!newPassword || !confirmPassword) {
-                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                throw new GraphQLError("All fields are required", {
                     extensions: {
-                        code: StatusCodes.BAD_REQUEST,
-                        http: { status: StatusCodes.BAD_REQUEST }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
 
             if (newPassword !== confirmPassword) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("Password mismatch", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
@@ -356,7 +382,7 @@ export const userMutations: MutationResolvers = {
 
             const userDetails = await User.findById(context.req.user?._id).select('+password') as IUser;
             if (!userDetails) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("User not found", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
@@ -364,19 +390,19 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            
+
             if (userDetails.account.includes(UserAccountEnum.Email)) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("Password is already set", {
                     extensions: {
-                        code: StatusCodes.NOT_FOUND,
-                        http: { status: StatusCodes.NOT_FOUND }
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
                     }
                 });
             }
 
             userDetails.password = newPassword;
             userDetails.account = [...userDetails.account, UserAccountEnum.Email];
-        
+
             await userDetails.save();
 
             return {
@@ -400,19 +426,19 @@ export const userMutations: MutationResolvers = {
             const { data } = args;
             const { token, userId, newPassword, confirmPassword } = data;
             if (!token || !userId || !newPassword || !confirmPassword) {
-                throw new GraphQLError(ReasonPhrases.BAD_REQUEST, {
+                throw new GraphQLError("All fields are required", {
                     extensions: {
-                        code: StatusCodes.BAD_REQUEST,
-                        http: { status: StatusCodes.BAD_REQUEST }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
 
             if (newPassword !== confirmPassword) {
-                throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + ' User payload not saved', {
+                throw new GraphQLError("Password mismatch", {
                     extensions: {
-                        code: StatusCodes.INTERNAL_SERVER_ERROR,
-                        http: { status: StatusCodes.INTERNAL_SERVER_ERROR }
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
                     }
                 });
             }
@@ -421,7 +447,7 @@ export const userMutations: MutationResolvers = {
                 .createHash("sha256")
                 .update(token)
                 .digest("hex");
-        
+
             const user = await User.findOne({
                 _id: userId,
                 resetPasswordToken,
@@ -429,10 +455,10 @@ export const userMutations: MutationResolvers = {
             });
 
             if (!user) {
-                throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + ' User payload not saved', {
+                throw new GraphQLError("User not found", {
                     extensions: {
-                        code: StatusCodes.INTERNAL_SERVER_ERROR,
-                        http: { status: StatusCodes.INTERNAL_SERVER_ERROR }
+                        code: StatusCodes.NOT_FOUND,
+                        http: { status: StatusCodes.NOT_FOUND }
                     }
                 });
             }
@@ -441,12 +467,59 @@ export const userMutations: MutationResolvers = {
             user.resetPasswordToken = undefined;
             user.resetPasswordExpire = undefined;
 
+
+            const forwarded = context.req.headers['x-forwarded-for'] as string;
+            const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
+            const source = context.req.useragent;
+            if (!source) {
+                throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + "Unable to verify device information", {
+                    extensions: {
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
+                    }
+                });
+            }
+            const deviceType = source.isMobile ? 'Mobile' : source.isTablet ? 'Tablet' : source.isDesktop ? 'Desktop' : 'Unknown';
+
+            const deviceId = context.req.cookies["_device"] as string | undefined;
+
+            if (deviceId && user.devices.some((data: IDevice) => data.deviceId === deviceId)) {
+                const deviceData = user.devices.find((data: IDevice) => data.deviceId === deviceId);
+                if (deviceData && (deviceData.deviceType === deviceType || deviceData.browser === source.browser || deviceData.os === source.os)) {
+                    sendToken(user, context.res);
+                } else {
+                    throw new GraphQLError("Device mismatch", {
+                        extensions: {
+                            code: StatusCodes.BAD_REQUEST,
+                            http: { status: StatusCodes.BAD_REQUEST }
+                        }
+                    });
+                }
+            } else {
+                const newDeviceId = uuidv4();    
+                await User.findByIdAndUpdate(
+                    user._id,
+                    {
+                        $push: {
+                            devices: {
+                                deviceId: newDeviceId,
+                                deviceType,
+                                ipAddress: ip,
+                                browser: source.browser,
+                                version: source.version,
+                                os: source.os,
+                                platform: source.platform,
+                                lastLogin: Date.now(),
+                            }
+                        },
+                    },
+                    { new: true, runValidators: true, useFindAndModify: false }
+                ).lean() as IUser;
+    
+                sendToken(user, context.res, newDeviceId);
+            }
+            
             await user.save();
-
-            const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(user);
-
-            context.res.cookie("accessToken", accessToken, accessTokenOptions);
-            context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
 
             return {
                 ...user.toObject(),
@@ -468,7 +541,7 @@ export const userMutations: MutationResolvers = {
         try {
             const userDetails = await User.findById(context.req.user?._id) as IUser;
             if (!userDetails) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("User not found", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
@@ -484,17 +557,17 @@ export const userMutations: MutationResolvers = {
                 lastName: lastName || userDetails.lastName,
                 phoneNumber: phoneNumber || userDetails.phoneNumber,
             };
-        
+
             const updatedUser = await User.findByIdAndUpdate(
                 context.req.user?._id,
                 updatedProfile,
                 { new: true, runValidators: true, useFindAndModify: false }
             );
             if (!updatedUser) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("Failed to update User Profile", {
                     extensions: {
-                        code: StatusCodes.NOT_FOUND,
-                        http: { status: StatusCodes.NOT_FOUND }
+                        code: StatusCodes.INTERNAL_SERVER_ERROR,
+                        http: { status: StatusCodes.INTERNAL_SERVER_ERROR }
                     }
                 });
             }
@@ -519,7 +592,7 @@ export const userMutations: MutationResolvers = {
         try {
             const { token } = args;
             if (!token) {
-                throw new GraphQLError("Invalid Credentails", {
+                throw new GraphQLError("Token is required", {
                     extensions: {
                         code: StatusCodes.NOT_FOUND,
                         http: { status: StatusCodes.NOT_FOUND }
@@ -531,21 +604,32 @@ export const userMutations: MutationResolvers = {
             if (!decodedToken) {
                 throw new GraphQLError("Invalid Credentails", {
                     extensions: {
-                        code: StatusCodes.NOT_FOUND,
-                        http: { status: StatusCodes.NOT_FOUND }
+                        code: StatusCodes.INTERNAL_SERVER_ERROR,
+                        http: { status: StatusCodes.INTERNAL_SERVER_ERROR }
                     }
                 });
             }
+            console.log(decodedToken);
             const { uid, email, name, picture, email_verified } = decodedToken;
             const user = await User.findOne({ email });
 
-            if (user) {
-                if (user?.googleId === uid) {
-                    const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(user);
+            const forwarded = context.req.headers['x-forwarded-for'] as string;
+            const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
+            const source = context.req.useragent;
+            if (!source) {
+                throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + "Unable to verify device information", {
+                    extensions: {
+                        code: StatusCodes.BAD_REQUEST,
+                        http: { status: StatusCodes.BAD_REQUEST }
+                    }
+                });
+            }
+            const deviceType = source.isMobile ? 'Mobile' : source.isTablet ? 'Tablet' : source.isDesktop ? 'Desktop' : 'Unknown';
 
-                    context.res.cookie("accessToken", accessToken, accessTokenOptions);
-                    context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
-                } else {
+            const deviceId = context.req.cookies["_device"] as string | undefined;
+
+            if (user) {
+                if (user?.googleId !== uid) {
                     user.googleId = uid;
                     user.account.push(UserAccountEnum.Google);
                     if (user?.profilePicture?.length === 0) {
@@ -553,14 +637,36 @@ export const userMutations: MutationResolvers = {
                     }
                     if (email === process.env.ADMIN_EMAIL) {
                         user.role = UserRoleEnum.Admin;
-                        await user.save();
                     }
-                    await user.save();
-                    const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(user);
-
-                    context.res.cookie("accessToken", accessToken, accessTokenOptions);
-                    context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
                 }
+
+                if (deviceId && user.devices.some((data: IDevice) => data.deviceId === deviceId)) {
+                    sendToken(user, context.res);
+                } else {
+                    const newDeviceId = uuidv4();
+                    await User.findByIdAndUpdate(
+                        user._id,
+                        {
+                            $push: {
+                                devices: {
+                                    deviceId: newDeviceId,
+                                    deviceType,
+                                    ipAddress: ip,
+                                    browser: source.browser,
+                                    version: source.version,
+                                    os: source.os,
+                                    platform: source.platform,
+                                    lastLogin: Date.now(),
+                                }
+                            },
+                        },
+                        { new: true, runValidators: true, useFindAndModify: false }
+                    ).lean() as IUser;
+        
+                    sendToken(user, context.res, newDeviceId);
+                }
+
+                await user.save();
 
                 return {
                     ...user.toObject(),
@@ -569,6 +675,8 @@ export const userMutations: MutationResolvers = {
                     account: user.account.map((acc: string) => acc as UserAccountEnum),
                 };
             } else {
+                const deviceId = uuidv4();
+
                 const newUser = await User.create({
                     firstName: name.split(" ")[0],
                     lastName: name.split(" ").slice(1).join(" "),
@@ -576,13 +684,24 @@ export const userMutations: MutationResolvers = {
                     avatar: picture,
                     account: [UserAccountEnum.Google],
                     isVerified: email_verified,
-                    role: email === process.env.ADMIN_EMAIL? UserRoleEnum.Admin : UserRoleEnum.User,
-                    googleId: uid
+                    role: email === process.env.ADMIN_EMAIL ? UserRoleEnum.Admin : UserRoleEnum.User,
+                    googleId: uid,
+                    devices: [
+                        {
+                            deviceId,
+                            deviceType,
+                            ipAddress: ip,
+                            browser: source.browser || "Unknown",
+                            version: source.version || "Unknown",
+                            os: source.os || "Unknown",
+                            platform: source.platform || "Unknown",
+                            lastLogin: Date.now(),
+                        }
+                    ]
                 });
-                const { accessToken, accessTokenOptions, refreshToken, refreshTokenOptions } = await sendToken(newUser);
 
-                context.res.cookie("accessToken", accessToken, accessTokenOptions);
-                context.res.cookie("refreshToken", refreshToken, refreshTokenOptions);
+                sendToken(newUser, context.res, deviceId);
+                await newUser.save();
 
                 return {
                     ...newUser.toObject(),

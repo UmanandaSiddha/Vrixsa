@@ -1,12 +1,5 @@
-import { CookieOptions } from "express";
+import { CookieOptions, Response } from "express";
 import { IUser } from "../models/user.model.js";
-
-interface TokenResponse {
-    accessToken: string;
-    refreshToken: string;
-    accessTokenOptions: CookieOptions;
-    refreshTokenOptions: CookieOptions;
-}
 
 const generateOptions = (expireTime: number) => {
     if (isNaN(expireTime)) {
@@ -14,9 +7,7 @@ const generateOptions = (expireTime: number) => {
     }
 
     const options: CookieOptions = {
-        expires: new Date(
-            Date.now() + expireTime
-        ),
+        expires: new Date(Date.now() + (expireTime * 24 * 60 * 60 * 1000)),
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: 'strict',
@@ -25,24 +16,20 @@ const generateOptions = (expireTime: number) => {
     return options;
 }
 
-const sendToken = async (user: IUser): Promise<TokenResponse> => {
+const sendToken = (user: IUser, res: Response, deviceId?: string): void => {
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
 
-    await user.save({ validateBeforeSave: false });
+    const accessTokenOptions = generateOptions(Number(process.env.ACCESS_COOKIE_EXPIRE));
+    const refreshTokenOptions = generateOptions(Number(process.env.REFRESH_COOKIE_EXPIRE));
 
-    const cookieExpireDays = Number(process.env.REFRESH_COOKIE_EXPIRE) * 24 * 60 * 60 * 1000;
-    const cookieExpireMinutes = Number(process.env.ACCESS_COOKIE_EXPIRE) * 60 * 1000;
-
-    const accessTokenOptions = generateOptions(cookieExpireMinutes);
-    const refreshTokenOptions = generateOptions(cookieExpireDays);
-
-    return {
-        accessToken,
-        refreshToken,
-        accessTokenOptions,
-        refreshTokenOptions,
+    if (deviceId) {
+        const deviceIdOptions = generateOptions(365);
+        res.cookie("_device", deviceId, deviceIdOptions);
     }
+
+    res.cookie("_session", accessToken, accessTokenOptions);
+    res.cookie("_gsession", refreshToken, refreshTokenOptions);
 };
 
 export default sendToken;

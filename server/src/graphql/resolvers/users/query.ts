@@ -15,7 +15,7 @@ export const userResolvers: QueryResolvers = {
                 })
             }
             
-            const userDetails = await User.findById(args?._id).lean() as IUser;
+            const userDetails = await User.findById(context.req.user._id).lean() as IUser;
 
             if (!userDetails) {
                 throw new GraphQLError("User not found", {

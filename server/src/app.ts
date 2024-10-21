@@ -3,9 +3,12 @@ import cors, { CorsOptions } from 'cors';
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import helmet from "helmet";
-import limiter from './config/rateLimiter.js';
+// import limiter from './config/rateLimiter.js';
 import ErrorMiddleware from './middlewares/error.js';
 import useragent from 'express-useragent';
+
+import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app: Application = express();
 
@@ -35,6 +38,9 @@ app.use(express.static("public"));
 app.use(express.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+
+app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 app.use(ErrorMiddleware);
 

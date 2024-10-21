@@ -113,7 +113,7 @@ export const uploadProfilePicture = catchAsyncErrors(async (req: CustomRequest, 
 
 // User Logout
 export const logoutUser = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
-    res.cookie("accessToken", null, {
+    res.cookie("_session", null, {
         expires: new Date(Date.now()),
         httpOnly: true,
     });

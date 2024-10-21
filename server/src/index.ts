@@ -1,6 +1,7 @@
 import http from 'http';
-import dotenv from "dotenv";
 import Redis from "ioredis";
+import dotenv from "dotenv";
+import { parse } from 'graphql';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
@@ -11,6 +12,7 @@ import { resolvers } from './graphql/resolvers.js';
 import { typeDefs } from './graphql/typeDefs.js';
 import app from './app.js';
 import connectDB from './config/db.js';
+import { authenticate, CustomRequest } from './middlewares/auth.middleware.js';
 
 export const redis = new Redis.default();
 const PORT = process.env.PORT || 8081;
@@ -37,18 +39,27 @@ async function startServer() {
         // express.json({ limit: '50mb' }),
         expressMiddleware(server, {
             context: async ({ req, res }): Promise<any> => {
+                const customReq = req as CustomRequest;
                 try {
-                    if (req.url === '/' && req.body.operationName === 'IntrospectionQuery') {
-                        return { req, res }
+                    const query = customReq.body.query;
+                    if (query) {
+                        const parsedQuery = parse(query);
+
+                        for (const definition of parsedQuery.definitions) {
+                            if (definition.kind === 'OperationDefinition') {
+                                const operationName = definition.name?.value;
+                                if (operationName === 'GetUser') {
+                                    const user = await authenticate(customReq, res);
+                                    customReq.user = user;
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    // if (req.body.query.includes('loginUser') && req.body.variables.password) {
-                    //     return { req, res }
-                    // }
-                    // const { user } = await authenticate({ req })
-                    // return { req, res, user };
-                    return { req, res };
+                    return { req: customReq, res };
                 } catch (error) {
-                    console.log(error);
+                    console.error(error);
+                    throw new Error("Error in context function");
                 }
             }
         }),
