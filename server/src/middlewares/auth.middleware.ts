@@ -34,8 +34,8 @@ export const authenticate = async (req: CustomRequest, res: Response) => {
 				const decodedRefresh = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!) as JwtPayload & { id: string };
 				const user = await User.findById(decodedRefresh.id);
 
-				if (!user || user.refreshToken !== refreshToken) {
-					throw new ErrorHandler("Invalid refresh token", StatusCodes.FORBIDDEN);
+				if (!user) {
+					throw new ErrorHandler("User not found", StatusCodes.NOT_FOUND);
 				}
 				if (user.isBlocked) {
 					throw new ErrorHandler("Your account has been blocked", StatusCodes.FORBIDDEN);
@@ -47,13 +47,13 @@ export const authenticate = async (req: CustomRequest, res: Response) => {
 				}
 				const deviceType = source?.isMobile ? 'Mobile' : source?.isTablet ? 'Tablet' : source?.isDesktop ? 'Desktop' : 'Unknown';
 
-				if (deviceId && user.devices.some((data: IDevice) => data.deviceId === deviceId)) {
+				if (deviceId && user.devices.some((data: IDevice) => (data.refreshToken === refreshToken && data.deviceId === deviceId))) {
 					const deviceData = user.devices.find((data: IDevice) => data.deviceId === deviceId);
 					if (deviceData && (deviceData.deviceType !== deviceType || deviceData.os !== source?.os)) {
 						throw new ErrorHandler("Device mismatch", StatusCodes.FORBIDDEN);
 					}
 				} else {
-					throw new ErrorHandler("Device mismatch", StatusCodes.FORBIDDEN);
+					throw new ErrorHandler("Invalid refresh token", StatusCodes.FORBIDDEN);
 				}
 
 				const newAccessToken = user.generateAccessToken();

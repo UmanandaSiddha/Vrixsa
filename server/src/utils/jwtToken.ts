@@ -1,6 +1,11 @@
 import { CookieOptions, Response } from "express";
 import { IUser } from "../models/user.model.js";
 
+interface TokenResponse {
+    accessToken: string;
+    refreshToken: string;
+}
+
 const generateOptions = (expireTime: number) => {
     if (isNaN(expireTime)) {
         throw new Error("Invalid COOKIE_EXPIRE environment variable");
@@ -16,7 +21,7 @@ const generateOptions = (expireTime: number) => {
     return options;
 }
 
-const sendToken = (user: IUser, res: Response, deviceId?: string): void => {
+const sendToken = (user: IUser, res: Response, deviceId?: string): TokenResponse => {
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
 
@@ -30,6 +35,11 @@ const sendToken = (user: IUser, res: Response, deviceId?: string): void => {
 
     res.cookie("_session", accessToken, accessTokenOptions);
     res.cookie("_gsession", refreshToken, refreshTokenOptions);
+
+    return {
+        accessToken,
+        refreshToken,
+    }
 };
 
 export default sendToken;

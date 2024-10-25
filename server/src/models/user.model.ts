@@ -24,6 +24,7 @@ export interface IDevice extends Document {
     os: string;
     platform: string;
     lastLogin: Date;
+    refreshToken: string;
 }
 
 export interface IBillingInfo {
@@ -61,7 +62,6 @@ export interface IUser extends Document {
         count: number;
         lastLogin: Date;
     },
-    refreshToken: string;
     oneTimePassword?: string;
     oneTimeExpire?: Date;
     resetPasswordToken?: string;
@@ -107,9 +107,10 @@ const DeviceSchema: Schema<IDevice> = new mongoose.Schema(
             required: true 
         },
         lastLogin: { 
-            type: Date, 
-            default: Date.now 
-        }
+            type: Date,
+            default: Date.now
+        },
+        refreshToken: String,
     },
     {
         _id: false
@@ -202,7 +203,6 @@ const UserSchema: Schema<IUser> = new mongoose.Schema(
                 default: Date.now
             },
         },
-        refreshToken: String,
     },
     {
         timestamps: true,
@@ -227,7 +227,6 @@ UserSchema.methods.generateAccessToken = function (this: IUser) {
 			id: this._id,
 			email: this.email,
             role: this.role,
-            // account: this.account,
 		},
 		process.env.ACCESS_TOKEN_SECRET!, 
 		{ expiresIn: process.env.ACCESS_TOKEN_EXPIRE }
@@ -242,7 +241,6 @@ UserSchema.methods.generateRefreshToken = function (this: IUser) {
 		process.env.REFRESH_TOKEN_SECRET!,
 		{ expiresIn: process.env.REFRESH_TOKEN_EXPIRE }
 	);
-    this.refreshToken = token;
     return token;
 };
 

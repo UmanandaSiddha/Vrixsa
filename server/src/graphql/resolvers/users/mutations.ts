@@ -64,12 +64,16 @@ export const userMutations: MutationResolvers = {
                         version: source.version || "Unknown",
                         os: source.os || "Unknown",
                         platform: source.platform || "Unknown",
-                        lastLogin: Date.now(),
+                        lastLogin: new Date(),
                     }
                 ]
             });
 
-            const userPayload = await newUserRequestPayload.save();
+            const { refreshToken } = sendToken(newUserRequestPayload, context.res, deviceId);
+            newUserRequestPayload.devices[0].refreshToken = refreshToken;
+            const otp = newUserRequestPayload.getOneTimePassword();
+
+            const userPayload = await newUserRequestPayload.save({ validateBeforeSave: false });
 
             if (!userPayload) {
                 throw new GraphQLError(ReasonPhrases.INTERNAL_SERVER_ERROR + ' User payload not saved', {
@@ -80,11 +84,6 @@ export const userMutations: MutationResolvers = {
                 });
             }
 
-            sendToken(userPayload, context.res, deviceId);
-
-            const otp = userPayload.getOneTimePassword();
-            await userPayload.save({ validateBeforeSave: false });
-
             const message = `Email verification OTP ( valid for 15 minutes ) :- \n\n ${otp} \n\n Please ignore if you didn't requested this email.`;
 
             try {
@@ -94,9 +93,9 @@ export const userMutations: MutationResolvers = {
                     message,
                 });
             } catch (error) {
-                user.oneTimePassword = undefined;
-                user.oneTimeExpire = undefined;
-                await user.save({ validateBeforeSave: false });
+                userPayload.oneTimePassword = undefined;
+                userPayload.oneTimeExpire = undefined;
+                await userPayload.save({ validateBeforeSave: false });
             }
 
             return {
@@ -186,7 +185,9 @@ export const userMutations: MutationResolvers = {
                     });
                 }
             } else {
-                const newDeviceId = uuidv4();    
+                const newDeviceId = uuidv4();
+                const { refreshToken } = sendToken(userDetails, context.res, newDeviceId);
+
                 await User.findByIdAndUpdate(
                     userDetails._id,
                     {
@@ -199,14 +200,13 @@ export const userMutations: MutationResolvers = {
                                 version: source.version,
                                 os: source.os,
                                 platform: source.platform,
-                                lastLogin: Date.now(),
+                                lastLogin: new Date(),
+                                refreshToken
                             }
                         },
                     },
                     { new: true, runValidators: true, useFindAndModify: false }
                 ).lean() as IUser;
-    
-                sendToken(userDetails, context.res, newDeviceId);
             }
             
             await userDetails.save({ validateBeforeSave: false });
@@ -247,7 +247,7 @@ export const userMutations: MutationResolvers = {
             const user = await User.findOne({
                 _id: context.req.user?._id,
                 oneTimePassword,
-                oneTimeExpire: { $gt: Date.now() },
+                oneTimeExpire: { $gt: Date.now()},
             });
 
             if (!user) {
@@ -468,7 +468,6 @@ export const userMutations: MutationResolvers = {
             user.resetPasswordToken = undefined;
             user.resetPasswordExpire = undefined;
 
-
             const forwarded = context.req.headers['x-forwarded-for'] as string;
             const ip = forwarded ? forwarded.split(',')[0] : context.req.ip;
             const source = context.req.useragent;
@@ -497,7 +496,8 @@ export const userMutations: MutationResolvers = {
                     });
                 }
             } else {
-                const newDeviceId = uuidv4();    
+                const newDeviceId = uuidv4();
+                const { refreshToken } = sendToken(user, context.res, newDeviceId);  
                 await User.findByIdAndUpdate(
                     user._id,
                     {
@@ -510,14 +510,13 @@ export const userMutations: MutationResolvers = {
                                 version: source.version,
                                 os: source.os,
                                 platform: source.platform,
-                                lastLogin: Date.now(),
+                                lastLogin: new Date(),
+                                refreshToken,
                             }
                         },
                     },
                     { new: true, runValidators: true, useFindAndModify: false }
                 ).lean() as IUser;
-    
-                sendToken(user, context.res, newDeviceId);
             }
             
             await user.save();
@@ -610,7 +609,7 @@ export const userMutations: MutationResolvers = {
                     }
                 });
             }
-            console.log(decodedToken);
+
             const { uid, email, name, picture, email_verified } = decodedToken;
             const user = await User.findOne({ email });
 
@@ -649,6 +648,8 @@ export const userMutations: MutationResolvers = {
                     sendToken(user, context.res);
                 } else {
                     const newDeviceId = uuidv4();
+                    const { refreshToken } = sendToken(user, context.res, newDeviceId);
+
                     await User.findByIdAndUpdate(
                         user._id,
                         {
@@ -661,14 +662,13 @@ export const userMutations: MutationResolvers = {
                                     version: source.version,
                                     os: source.os,
                                     platform: source.platform,
-                                    lastLogin: Date.now(),
+                                    lastLogin: new Date(),
+                                    refreshToken,
                                 }
                             },
                         },
                         { new: true, runValidators: true, useFindAndModify: false }
                     ).lean() as IUser;
-        
-                    sendToken(user, context.res, newDeviceId);
                 }
 
                 await user.save();
@@ -700,12 +700,13 @@ export const userMutations: MutationResolvers = {
                             version: source.version || "Unknown",
                             os: source.os || "Unknown",
                             platform: source.platform || "Unknown",
-                            lastLogin: Date.now(),
+                            lastLogin: new Date(),
                         }
                     ]
                 });
 
-                sendToken(newUser, context.res, deviceId);
+                const { refreshToken } = sendToken(newUser, context.res, deviceId);
+                newUser.devices[0].refreshToken = refreshToken;
                 await newUser.save();
 
                 return {

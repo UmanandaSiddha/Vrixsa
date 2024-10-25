@@ -23,6 +23,7 @@ type Device {
     os: String!
     platform: String!
     lastLogin: Date!
+    refreshToken: String
 }
 
 type Address {

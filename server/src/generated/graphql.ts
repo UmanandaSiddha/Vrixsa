@@ -42,6 +42,7 @@ export type Device = {
   lastLogin: Scalars['Date']['output'];
   os: Scalars['String']['output'];
   platform: Scalars['String']['output'];
+  refreshToken?: Maybe<Scalars['String']['output']>;
   version: Scalars['String']['output'];
 };
 
@@ -330,6 +331,7 @@ export type DeviceResolvers<ContextType = any, ParentType extends ResolversParen
   lastLogin?: Resolver<ResolversTypes['Date'], ParentType, ContextType>;
   os?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   platform?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  refreshToken?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   version?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
